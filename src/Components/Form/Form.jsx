@@ -1,6 +1,7 @@
 import React from "react";
 import { OTHER_CARDS } from "../constants"; //import consts from constants.js
 import InputBase from "../InputBase/InputBase";
+import { cardNumberValidation } from "../validations";
 import './Form.css';
 
 const initialCard = { //easier to scale
@@ -33,10 +34,17 @@ class Form extends React.Component {
   }
 
   handleValidations = (type, value) => {
+    let errorText;
     switch(type) {
       case 'card':
-        this.setState({ cardType: this.findDebitCardType(value) });
-        //setState cardType or error message
+        errorText = cardNumberValidation(value);
+        this.setState((prevState) => ({ //prevState holds the state's current values
+          cardType: this.findDebitCardType(value),
+          error: {
+            ...prevState.error, //TODO: WHY NEED ... IF ONLY HAS ONE PREVSTATE.ERROR??
+            cardError: errorText, //dynamically adding cardError key to error object in state
+          },
+        }));
         break;
       case 'cardHolder':
         //check spaces and numbers
