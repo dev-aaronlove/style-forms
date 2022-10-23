@@ -1,7 +1,7 @@
 import React from "react";
 import { OTHER_CARDS } from "../constants"; //import consts from constants.js
 import InputBase from "../InputBase/InputBase";
-import { cardNumberValidation } from "../validations";
+import { cardExpireValidation, cardNumberValidation, cvcValidation, onlyTextValidation } from "../validations";
 import './Form.css';
 
 const initialCard = { //easier to scale
@@ -47,24 +47,25 @@ class Form extends React.Component {
         }));
         break;
       case 'cardHolder':
-        //check spaces and numbers
-        //setState or error
+        errorText = onlyTextValidation(value);
+        this.setState((prevState) => ({ error: { ...prevState.error, cardHolderError: errorText }}));
         break;
       case 'expiry':
-        //check date format
-        //setState or error
+        errorText = cardExpireValidation(value);
+        this.setState((prevState) => ({ error: { ...prevState.error, expiryError: errorText }}));
         break;
       case 'cvc':
-        //check min length
-        //setState or error
+        errorText = cvcValidation(3, value);
+        this.setState((prevState) => ({ error: { ...prevState.error, cvcError: errorText }}));
         break;
       default:
         break;
     }
   }
 
-  handleBlur = (e) => this.handleValidations(e.target.name, e.target.value);
-
+  // handleBlur = (e) => this.handleValidations(e.target.name, e.target.value);
+  handleBlur = ({target: {name, value}}) => this.handleValidations(name, value);
+  //can do the same destructuring in handleInputData
   handleInputData = (e) => {
     if (e.target.name === 'card') {
       let mask = e.target.value.split(' ').join('');
@@ -94,29 +95,64 @@ class Form extends React.Component {
     }
   }
 
+  checkErrorBeforeSave = () => {
+    const { cardData } = this.state;
+    let errorValue = {};
+    let isError = false;
+    Object.keys(cardData).forEach((val) => {
+      if (!cardData[val].length) {
+        errorValue = { ...errorValue, [`${val}Error`]: 'Required' };
+        isError = true;
+      }
+    });
+    this.setState({ error: errorValue });
+  }
+
+  handleAddCard = (e) => {
+    e.preventDefault();
+    const errorCheck = this.checkErrorBeforeSave();
+    if (!errorCheck) {
+      this.setState({
+        cardData: initialCard,
+        cardType: null,
+      })
+    }
+  }
+
   render() {
+    const { cardData, error, cardType, maxLength } = this.state;
 
     const inputData = [
-      {label: 'Card Number', name: 'card', type: 'text'},
-      {label: 'CardHolder\'s Name', name: 'cardHolder', type: 'text'},
-      {label: 'Expiry Date (MM/YY)', name: 'expiry', type: 'text'},
-      {label: 'Security Code', name: 'cvc', type: 'text'},
+      {label: 'Card Number', name: 'card', type: 'text', error: 'cardError'},
+      {label: 'CardHolder\'s Name', name: 'cardHolder', type: 'text', error: 'cardHolderError'},
+      {label: 'Expiry Date (MM/YY)', name: 'expiry', type: 'text', error: 'expiryError'},
+      {label: 'Security Code', name: 'cvc', type: 'text', error: 'cvcError'},
     ];
 
     return(
       <div>
         <h1>Add New Card</h1>
-        <form>
+        <form onSubmit={this.handleAddCard}>
           {inputData.length ? inputData.map((item) => ( //check to make sure inputData isn't null, otherwise doesn't run
             <InputBase 
               placholder={item.label}
               type={item.type}
-              value={this.state.cardData && this.state.cardData[item.name]} //this.state.cardData && is like a safeguard making sure that cardData exists
+              value={cardData && cardData[item.name]} //this.state.cardData && is like a safeguard making sure that cardData exists
               onChange={this.handleInputData}
               autoComplete="off"
-              maxLength={this.state.maxLength}
+              maxLength={maxLength}
               name={item.name}
               onBlur={this.handleBlur} //onBlur is a built-in event on input tag when user clicks off of input
+              error={error}
+              cardType={cardType}
+              isCard={item.name === 'card'}
+              errorM={
+                (error
+                && error[item.error]
+                && error[item.error].length > 1)
+                ? error[item.error]
+                : null
+              }
             />
           )) : null} 
           <div className="btn-wrapper">
